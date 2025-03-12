@@ -77,8 +77,15 @@ mcp-windows-basic
 # If installed locally or cloned from GitHub
 npm start
 ```
+### Using with FLUJO
+- Click "MCP" at the top
+- Click "Add Server"
+- Copy and paste this repo's url, click "1) parse", click "2) clone".
+- Wait for the next screen, click "1) Install dependencies", "2) Build server", "3) Test Server"
+- Click "Update Configuration" on the bottom.
 
-### Using with Claude for Desktop
+ "https://github.com/mario-andreschak/mcp-essentials-windows"
+### Using with Claude Desktop
 
 Add the server to your Claude for Desktop configuration file located at:
 - Windows: `%APPDATA%\Claude\claude_desktop_config.json`
@@ -87,9 +94,9 @@ Add the server to your Claude for Desktop configuration file located at:
 ```json
 {
   "mcpServers": {
-    "windows-basic": {
+    "mcp-essentials-windows": {
       "command": "node",
-      "args": ["C:/absolute/path/to/mcp-windows-basic/dist/index.js"]
+      "args": ["dist/index.js"]
     }
   }
 }
