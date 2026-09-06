@@ -1,3 +1,4 @@
+import fs from "node:fs/promises";
 import { createCommandTools } from "../dist/cmd-tools.js";
 import { configuration } from "../dist/index.js";
 import { fixture, find, text } from "./helpers.js";
@@ -14,7 +15,7 @@ test("host command tools require an explicit operator opt-in in configuration", 
 test("authorized command uses a configured working directory and preserves arbitrary literal text", async () => {
   const response = await find(tools, "execute-command")({ command: "node -e \"console.log(process.cwd()); console.log('rm -rf / is just text')\"" });
   expect(response.isError).toBe(false);
-  expect(JSON.parse(text(response)).stdout).toContain(state.allowed);
+  expect(JSON.parse(text(response)).stdout).toContain(await fs.realpath(state.allowed));
   expect(JSON.parse(text(response)).stdout).toContain("rm -rf / is just text");
 });
 test("commands cannot start from an unconfigured directory, including omitted cwd with no roots", async () => {

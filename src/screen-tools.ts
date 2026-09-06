@@ -1,4 +1,5 @@
 import fs from "node:fs/promises";
+import { constants } from "node:fs";
 import path from "node:path";
 import { z } from "zod";
 import { PathPolicy } from "./roots.js";
@@ -22,16 +23,36 @@ export function createScreenTools(policy: PathPolicy): ToolDefinition[] {
     const extension = seconds === undefined ? ".png" : ".mp4";
     if (path.extname(target).toLowerCase() !== extension) throw new Error("Output must end with " + extension);
     const cwd = policy.workingDirectory(path.dirname(target));
-    const execution = await runProcess(process.env.MCP_FFMPEG_PATH || "ffmpeg", screenArguments(target, seconds, fps), {
-      cwd, timeout: (seconds ?? 1) * 1000 + 20000, signal,
-    });
-    if (execution.exitCode !== 0) throw new Error("FFmpeg capture failed: " + execution.stderr);
-    const stats = await fs.stat(policy.resolve(target));
-    const response = result(JSON.stringify({ path: target, sizeBytes: stats.size, mimeType: seconds === undefined ? "image/png" : "video/mp4", durationSeconds: seconds }));
-    if (seconds === undefined && stats.size <= MAX_FILE_BYTES) {
-      response.content.push({ type: "image", mimeType: "image/png", data: (await fs.readFile(policy.resolve(target))).toString("base64") });
+    try {
+      await fs.lstat(target);
+      throw new Error("Capture output already exists.");
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error;
     }
-    return response;
+    const temporary = await fs.mkdtemp(path.join(cwd, ".mcp-capture-"));
+    try {
+      const captured = path.join(temporary, "capture" + extension);
+      const execution = await runProcess(process.env.MCP_FFMPEG_PATH || "ffmpeg", screenArguments(captured, seconds, fps), {
+        cwd, timeout: (seconds ?? 1) * 1000 + 20000, signal,
+      });
+      if (execution.exitCode !== 0) throw new Error("FFmpeg capture failed: " + execution.stderr);
+      signal?.throwIfAborted();
+      // The image2 muxer's -update mode can ignore -n. Exclusive publication
+      // protects existing output files, including concurrent capture attempts.
+      await fs.copyFile(captured, policy.resolve(target), constants.COPYFILE_EXCL);
+      const stats = await fs.stat(policy.resolve(target));
+      const response = result(JSON.stringify({ path: target, sizeBytes: stats.size, mimeType: seconds === undefined ? "image/png" : "video/mp4", durationSeconds: seconds }));
+      if (seconds === undefined && stats.size <= MAX_FILE_BYTES) {
+        response.content.push({ type: "image", mimeType: "image/png", data: (await fs.readFile(policy.resolve(target))).toString("base64") });
+      }
+      return response;
+    } finally {
+      const resolved = policy.resolve(temporary);
+      if (path.dirname(resolved) !== cwd || !path.basename(resolved).startsWith(".mcp-capture-")) {
+        throw new Error("Refusing cleanup outside the generated capture directory.");
+      }
+      await fs.rm(resolved, { recursive: true, force: true });
+    }
   }
   return [
     tool("take-screenshot", "Capture the Windows desktop to a new PNG inside an allowed directory. Requires FFmpeg; never overwrites existing files.",

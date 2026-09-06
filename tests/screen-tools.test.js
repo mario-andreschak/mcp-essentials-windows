@@ -34,5 +34,8 @@ test("capture output policy and duration constraints reject before execution", a
     const recorded = await find(tools, "record-screen")({ path: video, duration: 1, fps: 5 });
     expect(recorded.isError).toBe(false);
     expect((await fs.readFile(video)).subarray(4, 8).toString()).toBe("ftyp");
+    const original = await fs.readFile(screenshot);
     expect((await find(tools, "take-screenshot")({ path: screenshot })).isError).toBe(true);
+    expect(await fs.readFile(screenshot)).toEqual(original);
+    expect((await fs.readdir(state.allowed)).some(name => name.startsWith(".mcp-capture-"))).toBe(false);
   }, 60000);
