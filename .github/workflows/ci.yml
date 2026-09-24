@@ -1,0 +1,39 @@
+name: Build, protocol, and native Windows checks
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  verify:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+        node: [22, 24]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: ${{ matrix.node }}
+          cache: npm
+      - run: npm ci --ignore-scripts
+      - name: Install Windows FFmpeg for actual desktop capture tests
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          if (-not (Get-Command ffmpeg -ErrorAction SilentlyContinue)) {
+            choco install ffmpeg --no-progress --limit-output -y
+            if ($LASTEXITCODE -ne 0) { throw 'FFmpeg installation failed' }
+          }
+          ffmpeg -version
+          if ($LASTEXITCODE -ne 0) { throw 'FFmpeg unavailable' }
+      - run: npm test
+        env:
+          MCP_TEST_SCREEN_CAPTURE: ${{ runner.os == 'Windows' && 'true' || 'false' }}
+      - run: npm run test:package
+      - run: npm audit --omit=dev --audit-level=high

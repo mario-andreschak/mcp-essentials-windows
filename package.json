@@ -1,34 +1,42 @@
 {
   "name": "mcp-essentials-windows",
-  "version": "0.1.0",
-  "description": "Basic MCP server for Windows with file, command, and web functionality",
+  "version": "0.2.0",
+  "description": "MCP filesystem, optional host commands, and Windows screen capture tools",
+  "license": "MIT",
   "type": "module",
   "main": "dist/index.js",
+  "bin": {
+    "mcp-essentials-windows": "dist/index.js"
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "engines": {
+    "node": ">=22"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/mario-andreschak/mcp-essentials-windows.git"
+  },
   "scripts": {
     "build": "tsc",
     "start": "node dist/index.js",
-    "dev": "node src/index.js",
-    "test": "node --experimental-vm-modules node_modules/jest/bin/jest.js tests/roots.test.ts tests/file-tools.test.ts tests/cmd-tools.test.ts",
-    "test:watch": "node --experimental-vm-modules node_modules/jest/bin/jest.js --watch",
-    "test:coverage": "node --experimental-vm-modules node_modules/jest/bin/jest.js --coverage"
+    "dev": "npm run build && node dist/index.js",
+    "test": "npm run build && node --experimental-vm-modules node_modules/jest/bin/jest.js --runInBand",
+    "test:watch": "npm run build && node --experimental-vm-modules node_modules/jest/bin/jest.js --watch",
+    "prepack": "npm run build",
+    "test:package": "npm run build && node scripts/package-smoke.mjs"
   },
   "dependencies": {
-    "@modelcontextprotocol/sdk": "^1.6.1",
-    "fs-extra": "^11.3.0",
-    "node-fetch": "^3.3.2",
-    "zod": "^3.24.2"
+    "@modelcontextprotocol/server": "^2.0.0",
+    "zod": "^4.0.0"
   },
   "devDependencies": {
-    "@types/fs-extra": "^11.0.4",
-    "@types/jest": "^29.5.14",
+    "@modelcontextprotocol/client": "^2.0.0",
     "@types/node": "^22.13.9",
-    "jest": "^29.7.0",
-    "jest-environment-node": "^29.7.0",
-    "ts-jest": "^29.2.6",
+    "jest": "^30.5.1",
     "typescript": "^5.8.2"
-  },
-  "overrides": {
-    "glob": "^11.0.1",
-    "inflight": "npm:lru-cache@^11.0.2"
   }
 }
